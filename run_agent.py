@@ -6,31 +6,54 @@ from google.genai import types
 
 load_dotenv()
 
-async def main():
-    from app.agent import app
-    from app.app_utils import services
-    from google.adk.runners import Runner
+import os
+from google import genai
+from app.tools import read_resume, search_jobs, send_email_report
+
+load_dotenv()
+
+def main():
+    print("Running job finder pipeline...", flush=True)
     
-    runner = Runner(
-        app=app,
-        session_service=services.get_session_service(),
-        artifact_service=services.get_artifact_service(),
-        auto_create_session=True,
-    )
-    msg = types.Content(role="user", parts=[types.Part.from_text(text="Find remote and Gilgit jobs for me based on my resume and email me the report.")])
-    print("Running agent...", flush=True)
-    async for event in runner.run_async(
-        user_id="github-action",
-        session_id=str(uuid.uuid4()),
-        new_message=msg,
-    ):
-        if hasattr(event, "content") and event.content:
-            for p in event.content.parts:
-                if p.text:
-                    print(p.text, end="", flush=True)
-                elif p.function_call:
-                    print(f"\n[Tool Call]: {p.function_call.name}\n", flush=True)
-    print("\nAgent run complete!", flush=True)
+    # 1. Read resume
+    print("Reading resume...", flush=True)
+    resume_text = read_resume("Fakhar_Zikri_Resume_FullTime_AIEngineering.pdf")
+    
+    # 2. Search jobs
+    print("Searching jobs...", flush=True)
+    jobs_text = search_jobs("AI Engineer remote jobs", max_results=10)
+    
+    # 3. Use Gemini to score and write email
+    print("Generating report...", flush=True)
+    import time
+    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+    prompt = f"""You are an AI job finder. Review the following resume and job listings. 
+Score each job (0-100) based on how well it matches the resume. 
+Write a well-formatted email report of the best matches.
+
+Resume: {resume_text[:2000]}...
+
+Jobs: {jobs_text}
+"""
+    while True:
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt
+            )
+            report = response.text
+            break
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                print(f"Rate limited. Waiting 20 seconds...", flush=True)
+                time.sleep(20)
+            else:
+                raise e
+    
+    # 4. Send email
+    print("Sending email...", flush=True)
+    send_email_report("Daily Job Report - AI Engineering", report)
+    print("Done!", flush=True)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
