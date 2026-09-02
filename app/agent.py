@@ -40,7 +40,7 @@ root_agent = Agent(
     name="job_finder_agent",
     model=Gemini(
         model=MODEL,
-        retry_options=types.HttpRetryOptions(attempts=3),
+        retry_options=types.HttpRetryOptions(attempts=6),
     ),
     instruction=instruction,
     tools=[read_resume, search_jobs, send_email_report],
