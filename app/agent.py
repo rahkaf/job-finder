@@ -20,7 +20,7 @@ from google.genai import types
 
 from app.tools import read_resume, search_jobs, send_email_report
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.6-flash"
 
 instruction = """You are a highly capable AI agent specialized in finding jobs for the user.
 The user is looking for remote jobs, foreign opportunities, and local opportunities in Gilgit, Pakistan, tailored to their niche.
