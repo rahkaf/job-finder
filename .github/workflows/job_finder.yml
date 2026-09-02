@@ -1,0 +1,33 @@
+name: Job Finder Agent (Every 12 Hours)
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'  # Runs at minute 0 past every 12th hour
+  workflow_dispatch:        # Allows manual triggering
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+      - name: Install Dependencies
+        run: uv sync
+        
+      - name: Run Job Finder Agent
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+        run: |
+          uv run python run_agent.py
