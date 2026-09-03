@@ -12,11 +12,7 @@ def read_resume(filepath: str) -> str:
         filepath: The path to the PDF resume.
     """
     try:
-        reader = PdfReader(filepath)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n"
-        return text
+        return "\n".join(page.extract_text() for page in PdfReader(filepath).pages)
     except Exception as e:
         return f"Error reading resume: {e}"
 
@@ -27,14 +23,10 @@ def search_jobs(query: str, max_results: int = 5) -> str:
         query: The search query (e.g., 'remote AI engineer jobs').
         max_results: The maximum number of results to return.
     """
-    import time
-    time.sleep(5)
     try:
-        results = []
         with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=max_results):
-                results.append(f"Title: {r.get('title')}\nLink: {r.get('href')}\nSnippet: {r.get('body')}\n")
-        return "\n---\n".join(results) if results else "No jobs found."
+            results = [f"Title: {r.get('title')}\nLink: {r.get('href')}\nSnippet: {r.get('body')}\n" for r in ddgs.text(query, max_results=max_results)]
+            return "\n---\n".join(results) if results else "No jobs found."
     except Exception as e:
         return "Search failed due to rate limit or network error. Do NOT retry the search. Proceed with any jobs you have, or state that no jobs could be found right now."
 
@@ -43,7 +35,7 @@ def send_email_report(subject: str, body: str) -> str:
     
     Args:
         subject: The subject of the email.
-        body: The body content of the email report.
+        body: The HTML body content of the email report. Must be valid HTML, not Markdown.
     """
     sender_email = os.environ.get("SENDER_EMAIL")
     sender_password = os.environ.get("SENDER_PASSWORD")
@@ -57,7 +49,7 @@ def send_email_report(subject: str, body: str) -> str:
         msg['From'] = sender_email
         msg['To'] = receiver_email
         msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
+        msg.attach(MIMEText(body, 'html'))
         
         # Assuming Gmail SMTP. For other providers, change the host and port.
         server = smtplib.SMTP('smtp.gmail.com', 587)
